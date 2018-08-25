@@ -3,9 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import statistics as s
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_curve, auc, confusion_matrix, accuracy_score
+import pickle
 
 # Load the data from CSV -- optional
 # df_train = pd.read_csv('train.csv')
@@ -129,11 +131,16 @@ def prep_test(df):
 train = pd.read_pickle("train2.pkl")
 test = pd.read_pickle("test2.pkl")
 test_pid = pd.DataFrame(test['PassengerId']) # create a new DF for the passenger ID column
+
+X = train.drop(['Survived','PassengerId'], axis=1)
+y = train['Survived']
 test = test.drop('PassengerId', axis=1) # drop the passenger ID column from the test data-set
 
+X = preprocessing.scale(X)
+test = preprocessing.scale(test)
+
 # train-test-split
-X_train, X_test, y_train, y_test = train_test_split(train.drop(['Survived','PassengerId'],axis=1),
-                                                    train['Survived'], test_size=0.33)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
 
 # Logistic Regression function
 def log_reg(X_train, y_train, X_test):
@@ -143,12 +150,11 @@ def log_reg(X_train, y_train, X_test):
     print("Accuracy", accuracy_score(y_test, pred))
     return(logmodel)
 
-
 # function to test the model over N number of iterations
-def test_model_lg():
+def test_model_lg(X,y):
     error_rate = []
     for i in range(1,1000):
-        X_train1, X_test1, y_train1, y_test1 = train_test_split(train.drop(['Survived','PassengerId'],axis=1), train['Survived'], test_size=0.33)
+        X_train1, X_test1, y_train1, y_test1 = train_test_split(X, y, test_size=0.33)
         logmodel_test = LogisticRegression()
         logmodel_test.fit(X_train1,y_train1)
         p = logmodel_test.predict(X_test1)
@@ -158,8 +164,20 @@ def test_model_lg():
     print("Error Rate:", round(s.mean(error_rate),4))
     print("Accuracy:", round(1-s.mean(error_rate),4))
 
-logmodel = log_reg(X_train, y_train, X_test)
-test_model_lg()
+# # FIT the model on 33%
+# logmodel = log_reg(X_train, y_train, X_test)
+# test_model_lg(X,y) # test general model
+
+# # SAVE model in a pickle
+# save_classifier = open("logmodel_clf.pickle","wb")
+# pickle.dump(logmodel, save_classifier)
+# save_classifier.close()
+
+# LOAD model from a pickle
+logmodel_f = open("logmodel_clf.pickle","rb")
+logmodel = pickle.load(logmodel_f)
+logmodel_f.close()
+
 
 # prepare submission for kaggle
 p_submit = logmodel.predict(test)
